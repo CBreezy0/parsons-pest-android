@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Parsons Pest Detectives",
+    "slug": "parsons-pest-detectives",
+    "scheme": "parsonspest",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0C1F0C"
+    },
+    "android": {
+      "package": "com.parsons.pestdetectives",
+      "permissions": [],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0C1F0C"
+      }
+    },
+    "extra": {
+      "siteUrl": "https://www.parsonspestdetectives.com/",
+      "phone": "+12052020818",
+      "email": "info@parsonspestdetectives.com",
+      "address": "13040 Fisher Circle, McCalla, AL"
+    }
+  }
+}
