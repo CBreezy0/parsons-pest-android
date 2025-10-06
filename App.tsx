@@ -1,125 +1,114 @@
-import React, { useRef, useState, useEffect } from "react";
+// App.js (Snack-ready)
+// Deps to add in Snack:
+// @react-navigation/native
+// @react-navigation/native-stack
+// react-native-screens
+// react-native-safe-area-context
+// expo-status-bar
+// expo-image-picker
+// @react-native-async-storage/async-storage
+
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  Linking,
-  Platform,
-  ActivityIndicator,
   StyleSheet,
+  Image,
   TextInput,
   FlatList,
-  Image,
   Alert,
+  Platform,
+  Linking,
   ScrollView,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
-import Constants from "expo-constants";
-import { WebView } from "react-native-webview";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-/* -------- Config (can be wired to real backend later) -------- */
-const SITE_URL = "https://www.parsonspestdetectives.com/";
+import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+
+// ---------- Config ----------
 const PHONE = "+12052020818";
 const EMAIL = "info@parsonspestdetectives.com";
 const OFFICE_ADDR = "13040 Fisher Circle, McCalla, AL";
-
-const TABS = ["Website", "Diagnose", "Appointments", "Support"];
 const KEY_APPTS = "@ppd_appointments";
 
-export default function App() {
-  const [tab, setTab] = useState("Website");
+// React Navigation theme (dark-ish but minimal)
+const navTheme = {
+  ...DefaultTheme,
+  colors: { ...DefaultTheme.colors, background: "#0B1A0B" },
+};
+
+const Stack = createNativeStackNavigator();
+
+// ---------- Reusable UI ----------
+const Button = ({ label, onPress, style: styleOverride }) => (
+  <TouchableOpacity onPress={onPress} style={[styles.button, styleOverride]}>
+    <Text style={styles.buttonText}>{label}</Text>
+  </TouchableOpacity>
+);
+
+const Card = ({ children, fill }) => (
+  <View style={[fill ? styles.cardFill : styles.card]}>{children}</View>
+);
+
+const HeaderBrand = () => (
+  <View style={styles.headerBrand}>
+    <Text style={styles.brandTop}>Parsons</Text>
+    <Text style={styles.brandBottom}>Pest Detectives</Text>
+  </View>
+);
+
+// ---------- Screens ----------
+const HomeScreen = ({ navigation }) => {
   return (
     <View style={styles.root}>
       <StatusBar style="light" />
-      <Header />
-      <View style={styles.content}>
-        {tab === "Website" && <Website />}
-        {tab === "Diagnose" && <Diagnose />}
-        {tab === "Appointments" && <Appointments />}
-        {tab === "Support" && <Support />}
+      <HeaderBrand />
+      <View style={styles.hero}>
+        <Text style={styles.heroTitle}>Protect Your Home</Text>
+        <Text style={styles.heroSub}>
+          Fast diagnostics, easy scheduling, and direct support—right here.
+        </Text>
       </View>
-      <Tabs tab={tab} setTab={setTab} />
+
+      <View style={styles.homeGrid}>
+        <HomeTile
+          title="Diagnose a Pest"
+          subtitle="Snap or upload a photo"
+          onPress={() => navigation.navigate("Diagnose")}
+        />
+        <HomeTile
+          title="Book Appointment"
+          subtitle="Pick a time, add notes"
+          onPress={() => navigation.navigate("Appointments")}
+        />
+        <HomeTile
+          title="Support"
+          subtitle="Call, text, email, directions"
+          onPress={() => navigation.navigate("Support")}
+        />
+      </View>
     </View>
   );
-}
+};
 
-/* ---------------------- Header ---------------------- */
-function Header() {
-  const build = Constants?.expoConfig?.version ?? "1.0.0";
-  return (
-    <View style={styles.header}>
-      <Text style={styles.brandTop}>Parsons</Text>
-      <Text style={styles.brandBottom}>Pest Detectives</Text>
-      <Text style={styles.buildTag}>v{build}</Text>
-    </View>
-  );
-}
+const HomeTile = ({ title, subtitle, onPress }) => (
+  <TouchableOpacity onPress={onPress} style={styles.tile}>
+    <Text style={styles.tileTitle}>{title}</Text>
+    <Text style={styles.tileSub}>{subtitle}</Text>
+  </TouchableOpacity>
+);
 
-/* ----------------------- Tabs ----------------------- */
-function Tabs({ tab, setTab }) {
-  return (
-    <View style={styles.tabs}>
-      {TABS.map((t) => (
-        <TouchableOpacity
-          key={t}
-          onPress={() => setTab(t)}
-          style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
-        >
-          <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-            {t}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
-/* -------------------- Website tab ------------------- */
-function Website() {
-  const webRef = useRef(null);
-  const [loading, setLoading] = useState(true);
-  return (
-    <View style={styles.cardFill}>
-      {loading && (
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" />
-          <Text style={styles.loaderText}>Loading…</Text>
-        </View>
-      )}
-      <WebView
-        ref={webRef}
-        source={{ uri: SITE_URL }}
-        onLoadEnd={() => setLoading(false)}
-        javaScriptEnabled
-        domStorageEnabled
-        style={{ flex: 1, borderRadius: 16 }}
-        onShouldStartLoadWithRequest={(event) => {
-          const url = event.url;
-          if (
-            url.startsWith("tel:") ||
-            url.startsWith("mailto:") ||
-            url.startsWith("sms:")
-          ) {
-            Linking.openURL(url);
-            return false;
-          }
-          return true;
-        }}
-      />
-    </View>
-  );
-}
-
-/* -------------------- Diagnose tab ------------------ */
-function Diagnose() {
+const DiagnoseScreen = () => {
   const [imageUri, setImageUri] = useState(null);
   const [result, setResult] = useState(null);
   const [note, setNote] = useState("");
 
   const requestPerms = async (type) => {
-    if (Platform.OS === "web") return true; // Snack web: no prompt
+    if (Platform.OS === "web") return true;
     const fn =
       type === "camera"
         ? ImagePicker.requestCameraPermissionsAsync
@@ -146,7 +135,6 @@ function Diagnose() {
     }
   };
 
-  // Mock classifier (replace with real API later)
   const identify = () => {
     if (!imageUri) {
       Alert.alert("Add a photo first");
@@ -164,12 +152,12 @@ function Diagnose() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollPad}>
-      <View style={styles.card}>
+    <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 24 }}>
+      <HeaderBrand />
+      <Card>
         <Text style={styles.cardTitle}>Diagnose a Pest</Text>
         <Text style={styles.cardSub}>
-          Snap or upload a photo. We’ll suggest a likely match. A technician
-          confirms on-site.
+          Take or upload a photo. We’ll suggest a likely match. A technician confirms on-site.
         </Text>
 
         {imageUri ? (
@@ -193,7 +181,7 @@ function Diagnose() {
               {result.label} • {(result.confidence * 100).toFixed(0)}%
             </Text>
             <Text style={styles.resultTip}>
-              Tip: Keep kids/pets away, avoid disturbing the area.
+              Tip: Keep kids/pets away and avoid disturbing the area.
             </Text>
           </View>
         )}
@@ -205,13 +193,12 @@ function Diagnose() {
           onChangeText={setNote}
           style={styles.input}
         />
-      </View>
+      </Card>
     </ScrollView>
   );
-}
+};
 
-/* ------------------ Appointments tab ---------------- */
-function Appointments() {
+const AppointmentsScreen = () => {
   const [when, setWhen] = useState("");
   const [where, setWhere] = useState("");
   const [note, setNote] = useState("");
@@ -251,6 +238,8 @@ function Appointments() {
     setWhere("");
     setNote("");
     Alert.alert("Appointment requested");
+    // TODO: send to backend later
+    // sendAppointmentToServer(appt)
   };
 
   const remove = (id) => {
@@ -259,12 +248,12 @@ function Appointments() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollPad}>
-      <View style={styles.card}>
+    <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 24 }}>
+      <HeaderBrand />
+      <Card>
         <Text style={styles.cardTitle}>Book an Appointment</Text>
         <Text style={styles.cardSub}>
-          This demo saves your requests on-device. Hook up a backend to schedule
-          with dispatch.
+          Stored locally for this demo. We’ll wire this to a backend later.
         </Text>
 
         <TextInput
@@ -290,9 +279,9 @@ function Appointments() {
           multiline
         />
         <Button label="Request Appointment" onPress={add} />
-      </View>
+      </Card>
 
-      <View style={styles.card}>
+      <Card>
         <Text style={styles.cardTitle}>Your Appointments</Text>
         <FlatList
           data={items}
@@ -314,13 +303,12 @@ function Appointments() {
           )}
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         />
-      </View>
+      </Card>
     </ScrollView>
   );
-}
+};
 
-/* --------------------- Support tab ------------------- */
-function Support() {
+const SupportScreen = () => {
   const call = () => Linking.openURL(`tel:${PHONE}`);
   const text = () => Linking.openURL(`sms:${PHONE}`);
   const email = () => Linking.openURL(`mailto:${EMAIL}`);
@@ -333,45 +321,58 @@ function Support() {
   };
 
   return (
-    <View style={styles.card}>
-      <Text style={styles.cardTitle}>Support</Text>
-      <Text style={styles.cardSub}>Reach our team or visit the site.</Text>
-      <View style={styles.row}>
-        <Button label="Call" onPress={call} />
-        <Button label="Text" onPress={text} />
-      </View>
-      <View style={styles.row}>
-        <Button label="Email" onPress={email} />
-        <Button label="Directions" onPress={directions} />
-      </View>
-      <Button label="Open Website" onPress={() => Linking.openURL(SITE_URL)} />
-    </View>
+    <ScrollView style={styles.screen} contentContainerStyle={{ paddingBottom: 24 }}>
+      <HeaderBrand />
+      <Card>
+        <Text style={styles.cardTitle}>Support</Text>
+        <Text style={styles.cardSub}>Reach our team or get directions.</Text>
+        <View style={styles.row}>
+          <Button label="Call" onPress={call} />
+          <Button label="Text" onPress={text} />
+        </View>
+        <View style={styles.row}>
+          <Button label="Email" onPress={email} />
+          <Button label="Directions" onPress={directions} />
+        </View>
+      </Card>
+    </ScrollView>
   );
-}
+};
 
-/* ------------------- Reusable Button ----------------- */
-function Button({ label, onPress, style: styleOverride }) {
+// ---------- App Root / Navigation ----------
+export default function Root() {
   return (
-    <TouchableOpacity onPress={onPress} style={[styles.button, styleOverride]}>
-      <Text style={styles.buttonText}>{label}</Text>
-    </TouchableOpacity>
+    <NavigationContainer theme={navTheme}>
+      <Stack.Navigator
+        initialRouteName="Home"
+        screenOptions={{
+          headerShown: false,
+          animation: "slide_from_right", // slide-in from the right
+          contentStyle: { backgroundColor: "#0B1A0B" },
+        }}
+      >
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Diagnose" component={DiagnoseScreen} />
+        <Stack.Screen name="Appointments" component={AppointmentsScreen} />
+        <Stack.Screen name="Support" component={SupportScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
 
-/* ------------------------ Styles --------------------- */
+// ---------- Styles ----------
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#0B1A0B" },
-  header: {
-    paddingTop: 20,
-    paddingBottom: 12,
+  root: { flex: 1, backgroundColor: "#0B1A0B", paddingHorizontal: 12 },
+  headerBrand: {
     alignItems: "center",
-    backgroundColor: "#0B1A0B",
+    paddingTop: 22,
+    paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "rgba(255,255,255,0.12)",
   },
   brandTop: {
     color: "#E8FFE8",
-    fontSize: 14,
+    fontSize: 13,
     letterSpacing: 3,
     opacity: 0.75,
     textTransform: "uppercase",
@@ -382,32 +383,22 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginTop: 2,
   },
-  buildTag: {
-    color: "#BFEABF",
-    marginTop: 4,
-    fontSize: 12,
-    opacity: 0.7,
-  },
-  content: { flex: 1, padding: 12 },
-  tabs: {
-    flexDirection: "row",
-    gap: 6,
-    padding: 10,
-    backgroundColor: "#0B1A0B",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "rgba(255,255,255,0.12)",
-  },
-  tabBtn: {
-    flex: 1,
-    backgroundColor: "#132D13",
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  tabBtnActive: { backgroundColor: "#1C441C" },
-  tabText: { color: "#BFEABF", fontWeight: "700" },
-  tabTextActive: { color: "#E8FFE8" },
+  hero: { paddingVertical: 18 },
+  heroTitle: { color: "#E8FFE8", fontSize: 22, fontWeight: "800" },
+  heroSub: { color: "#9DCAA0", marginTop: 6, lineHeight: 20 },
 
+  homeGrid: { gap: 12, marginTop: 6 },
+  tile: {
+    backgroundColor: "#0F220F",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#183318",
+  },
+  tileTitle: { color: "#E8FFE8", fontSize: 18, fontWeight: "800" },
+  tileSub: { color: "#98C498", marginTop: 4 },
+
+  screen: { flex: 1, backgroundColor: "#0B1A0B", paddingHorizontal: 12 },
   card: {
     backgroundColor: "#0F220F",
     borderRadius: 16,
@@ -416,7 +407,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 4,
-    marginBottom: 12,
+    marginTop: 12,
   },
   cardFill: {
     backgroundColor: "#0F220F",
@@ -424,36 +415,11 @@ const styles = StyleSheet.create({
     padding: 6,
     flex: 1,
     overflow: "hidden",
+    marginTop: 12,
   },
   cardTitle: { color: "#E8FFE8", fontSize: 18, fontWeight: "800" },
-  cardSub: {
-    color: "#98C498",
-    marginTop: 4,
-    marginBottom: 10,
-    lineHeight: 20,
-  },
+  cardSub: { color: "#98C498", marginTop: 4, marginBottom: 10, lineHeight: 20 },
 
-  loader: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    right: 0,
-    left: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-  },
-  loaderText: { marginTop: 8, color: "#CDE6CD" },
-
-  input: {
-    backgroundColor: "#0B1A0B",
-    borderWidth: 1,
-    borderColor: "#183318",
-    borderRadius: 12,
-    padding: 12,
-    color: "#E8FFE8",
-    marginBottom: 10,
-  },
   row: { flexDirection: "row", gap: 8, marginVertical: 6 },
 
   button: {
@@ -464,6 +430,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   buttonText: { color: "#E8FFE8", fontWeight: "800" },
+
+  input: {
+    backgroundColor: "#0B1A0B",
+    borderWidth: 1,
+    borderColor: "#183318",
+    borderRadius: 12,
+    padding: 12,
+    color: "#E8FFE8",
+    marginBottom: 10,
+  },
 
   photo: {
     width: "100%",
@@ -516,6 +492,4 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     alignSelf: "flex-start",
   },
-
-  scrollPad: { paddingBottom: 24 },
 });
